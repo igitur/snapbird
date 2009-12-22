@@ -132,10 +132,8 @@ $type = isset($_GET['type']) ? $_GET['type'] : 'tweets';
       </div>
     </div>    
   </div>
-<!-- <script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script> -->
-<script src="/jquery.js"></script>
-<!-- <script src="/twitter-search.js"></script> -->
-<script src="/twitterlib.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+<script src="/twitterlib/twitterlib.js"></script>
 <script src="/snapbird.js?2009-12-10"></script>
 <script>
 var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");

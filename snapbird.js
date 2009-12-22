@@ -1,26 +1,3 @@
-var ify = function() {
-  return {
-    link: function(t) {
-      return t.replace(/[a-z]+:\/\/[a-z0-9-_]+\.[a-z0-9-_:~%&\?\/.=]+[^:\.,\)\s*$]/ig, function(m) {
-        return '<a href="' + m + '">' + ((m.length > 25) ? m.substr(0, 24) + '...' : m) + '</a>';
-      });
-    },
-    at: function(t) {
-      return t.replace(/(^|[^\w]+)\@([a-zA-Z0-9_]{1,15}(\/[a-zA-Z0-9-_]+)*)/g, function(m, m1, m2) {
-        return m1 + '@<a href="http://twitter.com/' + m2 + '">' + m2 + '</a>';
-      });
-    },
-    hash: function(t) {
-      return t.replace(/(^|[^\w'"]+)\#([a-zA-Z0-9_]+)/g, function(m, m1, m2) {
-        return m1 + '#<a href="http://search.twitter.com/search?q=%23' + m2 + '">' + m2 + '</a>';
-      });
-    },
-    clean: function(tweet) {
-      return this.hash(this.at(this.link(tweet)));
-    }
-  };
-}();
-
 var store = (function () {
   var useStorage = !!window.localStorage;
   
@@ -65,7 +42,18 @@ var store = (function () {
 })();
 
 // very hacky code - sorry!
-var $tweets = $('#tweets ul'), screen_name = '', url = '', page = 1, state = '', total_tweets = 0, statusTop = null;
+var $tweets = $('#tweets ul'), 
+    screen_name = url = state = '', 
+    page = 1, 
+    total_tweets = 0, 
+    total_searched = 0,
+    statusTop = null, 
+    type_string = { 
+      timeline : 'tweets', 
+      favs: 'favourites', 
+      friends: 'friends&rsquo; tweets', 
+      list: 'member tweets' 
+    };
 
 $('input.search').live('click', function () {
   $('form').submit();
@@ -114,13 +102,15 @@ $('form').submit(function (e) {
   screen_name = $('#screen_name').val();
   
   var newstate = $(this).serialize(),
-      timeline = 'http://twitter.com/statuses/user_timeline/' + screen_name + '.json',
-      favs = 'http://twitter.com/favorites/' + screen_name + '.json',
       friends = '/friends.php',
-      type_string = 'tweets', 
-      type = 'tweets',
-      list = '',
-      search = $('#search').val();
+      type = 'timeline',
+      search = $('#search').val(),
+      filter = twitterlib.filter.format(search);
+
+  // if ($.trim(search.length) == 0) {
+  //   $('#status').html('Nothing to search for.');
+  //   // return;
+  // }
   
   if (state != newstate) {
     state = newstate;
@@ -128,213 +118,118 @@ $('form').submit(function (e) {
     
     if ( $('#favs').is(':checked') ) {
       url = favs;
-      type_string = 'favourites';
       type = 'favs';
     } else if ($('#withfriends').is(':checked')) {
       url = friends;
-      type_string = 'friends&rsquo; tweets';
-      type = 'withfriends';
-    } else {
-      list = screen_name.match(/^(.*?)\/(.*?)$/);
-      if (list != null) {
-        // then we're a list
-        timeline = 'http://api.twitter.com/1/' + list[1] + '/lists/' + list[2] + '/statuses.json';
-        type_string = 'member tweets';
-      }
-      url = timeline;
+      type = 'friends';
+    } else if (search.match(/\//)) {
+      type = 'list';
     }
-    
 
-    page = 1;
     total_tweets = 0;
+    total_searched = 0;
     $tweets.empty();
     
     $('#permalink').attr('href', '/' + screen_name + '/' + type + '/' + encodeURIComponent(search));
     
-    $tweets.append('<li class="searchterm">Searching <em><strong>' + screen_name + '</strong>&rsquo;s ' + type_string + '</em> for <strong>' + search.replace(/<>/g, function (m) { return m == '<' ? '&lt;' : '&gt;'; }) + '</strong></li>');
+    $tweets.append('<li class="searchterm">Searching <em><strong>' + screen_name + '</strong>&rsquo;s ' + type_string[type] + '</em> for <strong>' + search.replace(/<>/g, function (m) { return m == '<' ? '&lt;' : '&gt;'; }) + '</strong></li>');
+    $('body').addClass('results');
     
+    updateRequestStatus();
+    $('body').addClass('loading');
+        
     // need a way to cancel all outstanding API requests - bespoke $.getJSONP on it's way!
-  } 
-  // else { don't need page++ happens automatically in the success function }
-  
-  getTweets();
-});
-
-function getTweets() {
-  var search = $('#search').val(), s = twitterSearch.formatSearch(search);
-  
-  if (search) {
-    $('#status').html('<p>Searched ' + total_tweets + ' tweets.</p><p>Requesting more...</p>');
-    
-    $.ajax({
-      url: url + '?count=200&per_page=200&page=' + page,
-      dataType: 'jsonp',
-      success: function (json) {
-        // update the page so that searching again requests the next page
-        page++;
+    twitterlib.cancel()[type](screen_name, { filter: search }, function (data, options) {
+      total_searched += options.originalTweets.length;
+      
+      // if there's no results, do another call - and keep going until we hit something
+      if (data.length == 0 && total_tweets == 0 && options.originalTweets.length == 0) {
+        $('#status p:first').text('Searched ' + total_searched + ' tweets, found nothing.');
+        updateRequestStatus();
+      } else if (data.length == 0 && total_tweets == 0) {
+        $('#status').html('<p>Searching ' + total_searched + ' tweets.</p><p>Read to: <strong>' + twitterlib.time.datetime(options.originalTweets[options.originalTweets.length - 1].created_at).replace(/ (AM|PM)/, function (a, m) { return m.toLowerCase() + ','; }) + '</strong></p>');
+        setTimeout(function () {
+          twitterlib.next();
+        }, 2000);
+        return;
+      } 
+      
+      if (total_tweets) {
+        $tweets.find('li:last').addClass('more'); // hard split line
+      }
+                    
+      var i = 0, j = 0, t, r, scrollPos = null, searches = filter.and.concat(filter.or).join('|');
+      
+      for (i = 0; i < data.length; i++) {
+        t = twitterlib.render(data[i], i);
+        $tweets.append(t);
         
-        var i = 0, j = 0, t, r, scrollPos = null, searches = s.and.concat(s.or).join('|');
-        total_tweets += json.length;
-        for (i = 0; i < json.length; i++) {
-          if (twitterSearch.filter(json[i], search)) {
-            t = tweet(json[i], i);
-            $tweets.append(t);
+        if (total_tweets == 0 && i == 0) {
+          $tweets.find('li:first').addClass('first');
+        } 
 
-            // really tricky code here, we're finding *this* and all nested text nodes
-            // then replacing them with our new <strong>text</strong> elements
-            $tweets.find('.entry-content:last, .entry-content:last *').contents().filter(function () {
-              return this.nodeName == '#text';
-            }).each(function () {
-              // ignore blank lines
-              // make matches bold
-              var change = '';
-              if (/[^\s]/.test(this.nodeValue)) {
-                // encoding of entities happens here, so we need to reverse back out
-                change = this.nodeValue.replace(/[<>&]/g, function (m) {
-                  var r = '&amp;';
-                  if (m == '<') {
-                    r = '&lt;';
-                  } else if (m == '>') {
-                    r = '&gt;';
-                  }
-                  return r;
-                }).replace(new RegExp('(' + searches + ')', "gi"), "<strong>$1</strong>");
-                // need to convert this textNode to tags and text
-                $(this).replaceWith(change);
+        // really tricky code here, we're finding *this* and all nested text nodes
+        // then replacing them with our new <strong>text</strong> elements
+        $tweets.find('.entry-content:last, .entry-content:last *').contents().filter(function () {
+          return this.nodeName == '#text';
+        }).each(function () {
+          // ignore blank lines
+          // make matches bold
+          var change = '';
+          if (/[^\s]/.test(this.nodeValue)) {
+            // encoding of entities happens here, so we need to reverse back out
+            change = this.nodeValue.replace(/[<>&]/g, function (m) {
+              var r = '&amp;';
+              if (m == '<') {
+                r = '&lt;';
+              } else if (m == '>') {
+                r = '&gt;';
               }
-            });
+              return r;
+            }).replace(new RegExp('(' + searches + ')', "gi"), "<strong>$1</strong>");
+            // need to convert this textNode to tags and text
+            $(this).replaceWith(change);
+          }
+        });
 
-            
-            if (scrollPos == null) {
-              scrollPos = $tweets.find('li').offset().top;
-            }
-          }
           
-          if (scrollPos != null) {
-            console.log(scrollPos);
-            // $('body').animate({ scrollTop: scrollPos }, 500, function () {
-            //   console.log('finished');
-            // });
-          }
-        }
-        $('#status').html('<p>Searched ' + total_tweets + ' tweets.</p><p>Read back to: <strong>' + twitter_time(json[json.length - 1].created_at).replace(/ (AM|PM)/, function (a, m) { return m.toLowerCase() + ','; }) + '</strong></p>');
-        
-        if ($tweets.find('li').length == 0) {
-          // keep searching
-          // getTweets();
-        } else {
-          $('body').addClass('results');
-          if (statusTop == null) {
-            statusTop = $('#tweets aside').offset().top - parseFloat($('#tweets aside').css('margin-top').replace(/auto/, 0));            
-          }
+        scrollPos = $tweets.find('li:last').offset().top;
+        console.log(scrollPos);
+        if (scrollPos != null) {
+          setTimeout(function () {
+            $('html,body').animate({ scrollTop: scrollPos }, 500);
+          }, 100);
         }
       }
+      
+      total_tweets += data.length;
+
+      if (options.originalTweets.length) $('#status').html('<p>Found ' + total_tweets + ' tweet' + (total_tweets == 1 ? '' : 's') + '.</p><p>Read to: <strong>' + twitterlib.time.datetime(options.originalTweets[options.originalTweets.length - 1].created_at).replace(/ (AM|PM)/, function (a, m) { return m.toLowerCase() + ','; }) + '</strong></p>');
+      
+      updateRequestStatus();
+      $('body').removeClass('loading');
+      
+      
+      if (statusTop == null) {
+        statusTop = $('#tweets aside').offset().top - parseFloat($('#tweets aside').css('margin-top').replace(/auto/, 0));            
+      }
+      
     });
+
   } else {
-    $('#status').html('Nothing to search for.');
-  }
-}
-
-function formatTime(date) {
-  var hour = date.getHours(),
-      min = date.getMinutes() + "",
-      ampm = 'AM';
-  
-  if (hour == 0) {
-    hour = 12;
-  } else if (hour > 12) {
-    hour -= 12;
-    ampm = 'PM';
-  }
-  
-  if (min.length == 1) {
-    min = '0' + min;
-  }
-  
-  return hour + ':' + min + ' ' + ampm;
-}
-
-function formatDate(date) {
-  var ds = date.toDateString().split(/ /),
-      mon = ds[1],
-      day = ds[2],
-      dayi = ~~(day),
-      year = date.getFullYear(),
-      thisyear = (new Date()).getFullYear(),
-      th = 'th';
+    $('#status').html('<p>Searched ' + total_searched + ' tweets.</p><p>Requesting more...</p>');
+    $('body').addClass('loading');
     
-  // anti-'th' - but don't do the 11th, 12th or 13th
-  if ((dayi % 10) == 1 && day.substr(0, 1) != '1') {
-    th = 'st';
-  } else if ((dayi % 10) == 2 && day.substr(0, 1) != '1') {
-    th = 'nd';
-  } else if ((dayi % 10) == 3 && day.substr(0, 1) != '1') {
-    th = 'rd';
-  }
-  
-  if (day.substr(0, 1) == '0') {
-    day = day.substr(1);
-  }
-  
-  return mon + ' ' + day + th + (thisyear != year ? ', ' + year : '');
-}
+    setTimeout(function () { twitterlib.cancel().next(); }, 250);
+  } 
+});
 
-function twitter_time(time_value) {
-  var values = time_value.split(" "),
-      parsed_date = Date.parse(values[1] + " " + values[2] + ", " + values[5] + " " + values[3]),
-      date = new Date(parsed_date),
-      relative_to = (arguments.length > 1) ? arguments[1] : new Date(),
-      delta = ~~((relative_to.getTime() - parsed_date) / 1000),
-      r = '';
-  
-  
-  delta = delta + (relative_to.getTimezoneOffset() * 60);
-
-  if (delta < 5) {
-    r = 'less than 5 seconds ago';
-  } else if (delta < 30) {
-    r = 'half a minute ago';
-  } else if (delta < 60) {
-    r = 'less than a minute ago';
-  } else if (delta < 120) {
-    r = '1 minute ago';
-  } else if (delta < (45*60)) {
-    r = (~~(delta / 60)).toString() + ' minutes ago';
-  } else if (delta < (2*90*60)) { // 2* because sometimes read 1 hours ago
-    r = 'about 1 hour ago';
-  } else if (delta < (24*60*60)) {
-    r = 'about ' + (~~(delta / 3600)).toString() + ' hours ago';
-  } else {
-    if (delta < (48*60*60)) {
-      r = formatTime(date) + ' yesterday';
-    } else {
-      r = formatTime(date) + ' ' + formatDate(date);
-    }
-  }
-
-  return r;
-}
-
-function tweet(data, i) {
-  var html = '<li><div class="tweet';
-  if (i == 0) {
-      html += ' first';
-  }
-  
-  html += '"><div class="vcard"><a href="http://twitter.com/' + data.user.screen_name + '" class="url"><img alt="' + data.user.name + '" class="photo fn" height="48" src="' + data.user.profile_image_url + '" width="48" /></a></div>';
-  
-  html += '<div class="hentry"><strong><a href="http://twitter.com/';
-  html += data.user.screen_name + '" ';
-  html += 'title="' + data.user.name + '">' + data.user.screen_name + '</a></strong> ';
-  html += '<span class="entry-content">';
-  html += ify.clean(data.text);
-  html += '</span> <span class="meta entry-meta"><a href="http://twitter.com/' + data.user.screen_name;
-  html += '/status/' + data.id + '" class="entry-date" rel="bookmark"><span class="published" title="';
-  html += data.created_at + '">' + twitter_time(data.created_at) + '</span></a> <span>from ';
-  html += data.source;
-  html += '</span></span></div></div></li>';
-  
-  return html;
+function updateRequestStatus() {
+  $.getJSON('http://twitter.com/account/rate_limit_status.json?callback=?', function (data) {
+    var date = new Date(Date.parse(data.reset_time));
+    if (! $('#status p.rate').length) $('#status').append('<p class="rate" />');
+    $('#status p.rate').html('Requests left: ' + data.remaining_hits + ',<br />next reset: ' + date.getHours() + ':' + date.getMinutes());
+  });
 }
 
 function getQuery(s) {

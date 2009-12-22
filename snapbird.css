@@ -240,7 +240,7 @@ span.input:after {
 }
 
 #tweets ul {
-  min-height: 120px;
+  min-height: 165px;
   width: 520px;
   padding-top: 22px;
   padding-right: 22px;
@@ -337,7 +337,7 @@ span.input:after {
 }
 
 #status p strong {
-  display: block;
+/*  display: block;*/
 }
 
 #auth {
@@ -396,4 +396,8 @@ span.input:after {
 
 #permalink {
   font-size: 14px;
+}
+
+.loading #search {
+  background: #fff url(/images/ajax-loader.gif) no-repeat 98% 50%;
 }
