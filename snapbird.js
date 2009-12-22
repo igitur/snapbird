@@ -194,7 +194,6 @@ $('form').submit(function (e) {
 
           
         scrollPos = $tweets.find('li:last').offset().top;
-        console.log(scrollPos);
         if (scrollPos != null) {
           setTimeout(function () {
             $('html,body').animate({ scrollTop: scrollPos }, 500);
