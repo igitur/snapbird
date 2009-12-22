@@ -55,6 +55,8 @@ var $tweets = $('#tweets ul'),
       list: 'member tweets' 
     };
 
+twitterlib.custom('friends', '/friends.php');
+
 $('input.search').live('click', function () {
   $('form').submit();
   return false;
@@ -148,6 +150,7 @@ $('form').submit(function (e) {
         updateRequestStatus();
       } else if (data.length == 0 && total_tweets == 0) {
         $('#status').html('<p>Searching ' + total_searched + ' tweets.</p><p>Read to: <strong>' + twitterlib.time.datetime(options.originalTweets[options.originalTweets.length - 1].created_at).replace(/ (AM|PM)/, function (a, m) { return m.toLowerCase() + ','; }) + '</strong></p>');
+        updateRequestStatus();
         setTimeout(function () {
           twitterlib.next();
         }, 2000);
@@ -227,7 +230,7 @@ function updateRequestStatus() {
   $.getJSON('http://twitter.com/account/rate_limit_status.json?callback=?', function (data) {
     var date = new Date(Date.parse(data.reset_time));
     if (! $('#status p.rate').length) $('#status').append('<p class="rate" />');
-    $('#status p.rate').html('Requests left: ' + data.remaining_hits + ',<br />next reset: ' + date.getHours() + ':' + date.getMinutes());
+    $('#status p.rate').html('Requests left: ' + data.remaining_hits + '<br />Next reset: ' + date.getHours() + ':' + date.getMinutes());
   });
 }
 

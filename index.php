@@ -90,10 +90,7 @@ $type = isset($_GET['type']) ? $_GET['type'] : 'tweets';
   <article id="tweets">
     <aside>
       <p><a id="permalink" href="http://snapbird.org/">&raquo; Permalink to results</a></p>
-      <div id="status">
-        <p>Searched 200 tweets.</p>
-        <p>Read back to: <strong>12:15 AM Oct 16th</strong></p>
-      </div>
+      <div id="status"></div>
       <input type="button" class="search button" value="Search back further" />
     </aside>
 
