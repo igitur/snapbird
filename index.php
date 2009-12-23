@@ -131,7 +131,7 @@ $type = isset($_GET['type']) ? $_GET['type'] : 'tweets';
   </div>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
 <script src="/twitterlib/twitterlib.js"></script>
-<script src="/snapbird.js?2009-12-10"></script>
+<script src="/snapbird.js?2009-12-23"></script>
 <script>
 var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
 document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));

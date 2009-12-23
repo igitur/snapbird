@@ -55,7 +55,7 @@ var $tweets = $('#tweets ul'),
       list: 'member tweets' 
     };
 
-twitterlib.custom('friends', '/friends.php');
+twitterlib.custom('friends', '/friends.php?');
 
 $('input.search').live('click', function () {
   $('form').submit();
@@ -104,7 +104,6 @@ $('form').submit(function (e) {
   screen_name = $('#screen_name').val();
   
   var newstate = $(this).serialize(),
-      friends = '/friends.php',
       type = 'timeline',
       search = $('#search').val(),
       filter = twitterlib.filter.format(search);
@@ -119,12 +118,10 @@ $('form').submit(function (e) {
     store.set('screen_name', screen_name);
     
     if ( $('#favs').is(':checked') ) {
-      url = favs;
       type = 'favs';
     } else if ($('#withfriends').is(':checked')) {
-      url = friends;
       type = 'friends';
-    } else if (search.match(/\//)) {
+    } else if (screen_name.match(/\//)) {
       type = 'list';
     }
 
@@ -195,13 +192,13 @@ $('form').submit(function (e) {
           }
         });
 
-          
-        scrollPos = $tweets.find('li:last').offset().top;
-        if (scrollPos != null) {
-          setTimeout(function () {
-            $('html,body').animate({ scrollTop: scrollPos }, 500);
-          }, 100);
-        }
+      }
+      scrollPos = $tweets.find('li:last').offset().top;
+      if (scrollPos != null) {
+        setTimeout(function () {
+          $('html,body').animate({ scrollTop: scrollPos }, 500, function () {
+          });
+        }, 100);
       }
       
       total_tweets += data.length;
