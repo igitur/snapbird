@@ -41,6 +41,13 @@ var store = (function () {
   };
 })();
 
+$('body').keyup(function (event) {
+  if (event.keyCode == 27) {
+    $('body').removeClass('auth loading');
+    twitterlib.cancel();
+  }
+});
+
 // very hacky code - sorry!
 var $tweets = $('#tweets ul'), 
     screen_name = url = state = '', 
@@ -51,11 +58,15 @@ var $tweets = $('#tweets ul'),
     type_string = { 
       timeline : 'tweets', 
       favs: 'favourites', 
-      friends: 'friends&rsquo; tweets', 
-      list: 'member tweets' 
+      withfriends: 'friends&rsquo; tweets', 
+      list: 'member tweets',
+      dm: 'received direct messages',
+      dm_sent: 'sent direct messages'
     };
 
-twitterlib.custom('friends', '/friends.php?');
+twitterlib.custom('withfriends', '/friends.php?page=%page%');
+twitterlib.custom('dm', '/friends.php?page=%page%&type=direct_messages');
+twitterlib.custom('dm_sent', '/friends.php?page=%page%&type=direct_messagesSent');
 
 $('input.search').live('click', function () {
   $('form').submit();
@@ -85,12 +96,13 @@ $(function () {
 });
 
 $('input[type=radio]').bind('click change', function () {
-  var withfriends = $('#withfriends').is(':checked');
+  var authRequired = $('input[type=radio].authRequired').is(':checked');
   var auth = $('#auth_screen_name').length;
-  if (withfriends && !auth) {
+  
+  if (authRequired && !auth) {
     // show lightbox
     $('body').addClass('auth');
-  } else if (withfriends) {
+  } else if (authRequired) {
     $('#auth_screen_name').css('display', 'inline-block');
     $('#screen_name').hide();
   } else { // not checked
@@ -104,7 +116,7 @@ $('form').submit(function (e) {
   screen_name = $('#screen_name').val();
   
   var newstate = $(this).serialize(),
-      type = 'timeline',
+      type = $(this).find('input[type=radio]:checked').val(),
       search = $('#search').val(),
       filter = twitterlib.filter.format(search);
 
@@ -117,11 +129,12 @@ $('form').submit(function (e) {
     state = newstate;
     store.set('screen_name', screen_name);
     
-    if ( $('#favs').is(':checked') ) {
-      type = 'favs';
-    } else if ($('#withfriends').is(':checked')) {
-      type = 'friends';
-    } else if (screen_name.match(/\//)) {
+    // if ( $('#favs').is(':checked') ) {
+    //   type = 'favs';
+    // } else if ($('#withfriends').is(':checked')) {
+    //   type = 'withfriends';
+    // } else 
+    if (screen_name.match(/\//)) {
       type = 'list';
     }
 
@@ -137,7 +150,7 @@ $('form').submit(function (e) {
     updateRequestStatus();
     $('body').addClass('loading');
         
-    // need a way to cancel all outstanding API requests - bespoke $.getJSONP on it's way!
+    // cancel any outstanding request, and kick off a new one
     twitterlib.cancel()[type](screen_name, { filter: search }, function (data, options) {
       total_searched += options.originalTweets.length;
       
@@ -223,11 +236,15 @@ $('form').submit(function (e) {
   } 
 });
 
+function two(s) {
+  return (s+'').length == 1 ? '0' + s : s;
+}
+
 function updateRequestStatus() {
   $.getJSON('http://twitter.com/account/rate_limit_status.json?callback=?', function (data) {
     var date = new Date(Date.parse(data.reset_time));
     if (! $('#status p.rate').length) $('#status').append('<p class="rate" />');
-    $('#status p.rate').html('Requests left: ' + data.remaining_hits + '<br />Next reset: ' + date.getHours() + ':' + date.getMinutes());
+    $('#status p.rate').html('Requests left: ' + data.remaining_hits + '<br />Next reset: ' + two(date.getHours()) + ':' + two(date.getMinutes()));
   });
 }
 

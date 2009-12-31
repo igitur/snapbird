@@ -72,7 +72,11 @@ $type = isset($_GET['type']) ? $_GET['type'] : 'tweets';
         <div class="radiogroup">
           <input type="radio" name="source" <?php if ($type == 'tweets') echo 'checked="checked" '; ?>value="timeline" id="timeline" /><label for="timeline">tweets</label>
           <input type="radio" name="source" <?php if ($type == 'favs') echo 'checked="checked" '; ?>value="favs" id="favs" /><label for="favs">favourites</label>
-          <input type="radio" name="source" <?php if ($type == 'withfriends') echo 'checked="checked" '; ?>value="friends" id="withfriends" /><label for="withfriends">friends&rsquo; tweets</label>
+          <input class="authRequired" type="radio" name="source" <?php if ($type == 'withfriends') echo 'checked="checked" '; ?>value="withfriends" id="withfriends" /><label for="withfriends">friends&rsquo; tweets</label>
+        </div>
+        <div class="radiogroup">
+          <input class="authRequired" type="radio" name="source" <?php if ($type == 'dm_sent') echo 'checked="checked" '; ?>value="dm_sent" id="dm_sent" /><label for="dm_sent">sent DMs</label>
+          <input class="authRequired" type="radio" name="source" <?php if ($type == 'dm') echo 'checked="checked" '; ?>value="dm" id="dm" /><label for="dm">received DMs</label>
         </div>
       </fieldset>
       <fieldset class="for">
@@ -130,8 +134,8 @@ $type = isset($_GET['type']) ? $_GET['type'] : 'tweets';
     </div>    
   </div>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
-<script src="/twitterlib/twitterlib.js"></script>
-<script src="/snapbird.js?2009-12-23"></script>
+<script src="/twitterlib/twitterlib.js?2009-12-31"></script>
+<script src="/snapbird.js?2009-12-31"></script>
 <script>
 var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
 document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));

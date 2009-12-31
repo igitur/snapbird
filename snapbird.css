@@ -127,7 +127,7 @@ ul.plain li {
 }
 
 form {
-  margin: 45px 35px;
+  margin: 40px 35px;
 }
 
 fieldset {
@@ -166,15 +166,15 @@ span.input:after {
 }
 
 .radiogroup {
-  padding: 10px;
-  padding-left: 60px;
+  margin: 5px 10px;
+  padding-left: 50px;
 }
 
 .radiogroup label {
   font-size: 14px;
-  opacity: 0.6;
-  -moz-opacity: 0.6;
-  filter:alpha(opacity=60);
+  opacity: 0.8;
+  -moz-opacity: 0.8;
+  filter:alpha(opacity=80);
   padding: 5px 20px 5px 5px;
 }
 
