@@ -163,7 +163,7 @@ $('form').submit(function (e) {
         updateRequestStatus();
         setTimeout(function () {
           twitterlib.next();
-        }, 2000);
+        }, 1000);
         return;
       } 
       
