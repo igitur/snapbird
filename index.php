@@ -24,7 +24,11 @@ if ($_COOKIE['token'] && file_exists('auth/oauth/' . $_COOKIE['token'])) {
 
 $screen_name = isset($_GET['screen_name']) ? $_GET['screen_name'] : '';
 $search = isset($_GET['search']) ? $_GET['search'] : '';
-$type = isset($_GET['type']) ? $_GET['type'] : 'tweets';
+$type = isset($_GET['type']) ? $_GET['type'] : 'timeline';
+
+if ($type == 'list') {
+  $type = 'timeline';
+}
 
 ?>
 <!DOCTYPE html>
@@ -70,7 +74,7 @@ $type = isset($_GET['type']) ? $_GET['type'] : 'tweets';
           <span>&rsquo;s</span>
         </div>
         <div class="radiogroup">
-          <input type="radio" name="source" <?php if ($type == 'tweets') echo 'checked="checked" '; ?>value="timeline" id="timeline" /><label for="timeline">tweets</label>
+          <input type="radio" name="source" <?php if ($type == 'timeline') echo 'checked="checked" '; ?>value="timeline" id="timeline" /><label for="timeline">tweets</label>
           <input type="radio" name="source" <?php if ($type == 'favs') echo 'checked="checked" '; ?>value="favs" id="favs" /><label for="favs">favourites</label>
           <input class="authRequired" type="radio" name="source" <?php if ($type == 'withfriends') echo 'checked="checked" '; ?>value="withfriends" id="withfriends" /><label for="withfriends">friends&rsquo; tweets</label>
         </div>
@@ -108,7 +112,7 @@ $type = isset($_GET['type']) ? $_GET['type'] : 'tweets';
       <ul id="navlinks">
         <li><a href="/">Search</a></li>
         <!-- <li><a href="/about">About</a></li> --> <!-- Coming soon -->
-        <li><a href="http://github.com/remy/twitter-search-js">Developers</a></li>
+        <li><a href="http://github.com/remy/snapbird">Developers</a></li>
         <?php if ($twitterInfo != null) : ?>
         <li><a id="logout" href="/">Logout</a></li>
         <?php endif ?>

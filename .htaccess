@@ -1,0 +1,17 @@
+<IfModule mod_rewrite.c>
+Options +FollowSymLinks 
+RewriteEngine on 
+
+# strip www. from the domain
+RewriteCond %{HTTP_HOST} ^www\.snapbird\.org$ [NC]
+RewriteRule ^(.*)$ http://snapbird.org/$1 [R=301,L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9_]*/[a-z0-9_]*)/(list|timeline|withfriends|favs|dm|dm_sent)/(.*)/*$ index.php?screen_name=$1&type=$2&search=$3 [NC,QSA,L]
+RewriteRule ^([a-z0-9_]*)/(timeline|withfriends|favs|dm|dm_sent)/(.*)/*$ index.php?screen_name=$1&type=$2&search=$3 [NC,QSA,L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9_]*)/(.*)/*$ index.php?screen_name=$1&type=timeline&search=$2 [NC,QSA,L]
+</IfModule>
